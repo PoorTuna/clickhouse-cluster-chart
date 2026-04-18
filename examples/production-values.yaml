@@ -1,0 +1,189 @@
+# Production: 3 shards / 2 replicas, 5 keepers, TLS, PDB, monitoring, anti-affinity
+#
+# Requires:
+#   - StorageClass "ssd"
+#   - prometheus-operator
+#   - Secret "clickhouse-tls" (tls.crt, tls.key, ca.crt)
+#   - Secret "clickhouse-default-password" (key: password)
+
+commonLabels:
+  environment: production
+  team: data-platform
+
+clickhouseCluster:
+  enabled: true
+  shards: 3
+  replicas: 2
+
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "4"
+        memory: "16Gi"
+      limits:
+        cpu: "8"
+        memory: "32Gi"
+    env:
+      - name: TZ
+        value: "UTC"
+
+  dataVolumeClaimSpec:
+    accessModes:
+      - ReadWriteOnce
+    storageClassName: ssd
+    resources:
+      requests:
+        storage: 500Gi
+
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+    policy: Enabled
+
+  podTemplate:
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: clickhouse
+            topologyKey: kubernetes.io/hostname
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: clickhouse
+    tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "clickhouse"
+        effect: "NoSchedule"
+    nodeSelector:
+      node-role.kubernetes.io/clickhouse: ""
+    priorityClassName: high-priority
+    securityContext:
+      fsGroup: 101
+      runAsNonRoot: true
+    terminationGracePeriodSeconds: 120
+
+  settings:
+    enableDatabaseSync: true
+    defaultUserPassword:
+      enabled: true
+      passwordType: sha256_password
+      secret:
+        name: clickhouse-default-password
+        key: password
+    logger:
+      level: information
+      logToFile: true
+      size: 1000M
+      count: 50
+      jsonLogs: true
+    tls:
+      enabled: true
+      required: true
+      serverCertSecret:
+        name: clickhouse-tls
+        key: tls.crt
+      caBundle:
+        name: clickhouse-tls
+        key: ca.crt
+    extraConfig:
+      merge_tree:
+        max_suspicious_broken_parts: 5
+      query_log:
+        partition_by: toYYYYMM(event_date)
+
+keeperCluster:
+  enabled: true
+  replicas: 5
+
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+
+  dataVolumeClaimSpec:
+    storageClassName: ssd
+    resources:
+      requests:
+        storage: 50Gi
+
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+    policy: Enabled
+
+  podTemplate:
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app.kubernetes.io/component: keeper
+            topologyKey: kubernetes.io/hostname
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/component: keeper
+    tolerations:
+      - key: "dedicated"
+        operator: "Equal"
+        value: "clickhouse"
+        effect: "NoSchedule"
+    nodeSelector:
+      node-role.kubernetes.io/clickhouse: ""
+    terminationGracePeriodSeconds: 60
+
+  settings:
+    logger:
+      level: information
+      jsonLogs: true
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  scrapeTimeout: 10s
+  labels:
+    release: kube-prometheus-stack
+
+keeperServiceMonitor:
+  enabled: true
+  interval: 30s
+  labels:
+    release: kube-prometheus-stack
+
+prometheusRule:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack
+  defaultRules:
+    enabled: true
+
+grafanaDashboard:
+  enabled: true
+  labels:
+    grafana_dashboard: "1"
+
+networkPolicy:
+  enabled: true
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    allowKeeper: true
+    fromNamespaces:
+      - matchLabels:
+          name: app-namespace
+  egress:
+    allowDNS: true

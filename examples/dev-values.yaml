@@ -1,0 +1,57 @@
+# Dev: 1 shard, 2 replicas, small storage, debug logging
+
+clickhouseCluster:
+  enabled: true
+  shards: 1
+  replicas: 2
+
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 20Gi
+
+  podTemplate:
+    terminationGracePeriodSeconds: 30
+
+  settings:
+    enableDatabaseSync: true
+    logger:
+      level: debug
+      logToFile: true
+      size: 100M
+      count: 5
+      jsonLogs: false
+
+keeperCluster:
+  enabled: true
+  replicas: 3
+
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 5Gi
+
+  settings:
+    logger:
+      level: debug
+
+tests:
+  enabled: true

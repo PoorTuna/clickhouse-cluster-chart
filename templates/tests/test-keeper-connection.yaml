@@ -1,0 +1,44 @@
+{{- if and .Values.tests.enabled .Values.keeperCluster.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "clickhouse-cluster.keeperFullname" . }}-test-connection
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: keeper-check
+      image: "{{ .Values.tests.keeperImage.repository }}:{{ .Values.tests.keeperImage.tag }}"
+      imagePullPolicy: {{ .Values.tests.keeperImage.pullPolicy }}
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Testing Keeper connectivity..."
+          KEEPER_HOST="{{ include "clickhouse-cluster.keeperFullname" . }}"
+          KEEPER_PORT=2181
+
+          # Send the "ruok" four-letter command
+          RESPONSE=$(echo ruok | nc -w 5 "$KEEPER_HOST" "$KEEPER_PORT" 2>/dev/null || true)
+          if [ "$RESPONSE" = "imok" ]; then
+            echo "Keeper is healthy: $RESPONSE"
+            exit 0
+          fi
+
+          # Fallback: try mntr command
+          RESPONSE=$(echo mntr | nc -w 5 "$KEEPER_HOST" "$KEEPER_PORT" 2>/dev/null || true)
+          if echo "$RESPONSE" | grep -q "zk_version"; then
+            echo "Keeper is healthy (mntr responded)"
+            exit 0
+          fi
+
+          echo "Keeper health check failed. Response: $RESPONSE"
+          exit 1
+{{- end }}

@@ -1,0 +1,84 @@
+# Multi-shard: 4 shards / 3 replicas with extraConfig tuning
+
+clickhouseCluster:
+  enabled: true
+  shards: 4
+  replicas: 3
+
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "4"
+        memory: "16Gi"
+      limits:
+        cpu: "8"
+        memory: "32Gi"
+    env:
+      - name: TZ
+        value: "UTC"
+
+  dataVolumeClaimSpec:
+    storageClassName: ssd
+    resources:
+      requests:
+        storage: 500Gi
+
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+
+  podTemplate:
+    affinity:
+      podAntiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: clickhouse
+              topologyKey: kubernetes.io/hostname
+    terminationGracePeriodSeconds: 120
+
+  settings:
+    enableDatabaseSync: true
+    logger:
+      level: information
+      jsonLogs: true
+    extraConfig:
+      merge_tree:
+        max_suspicious_broken_parts: 10
+        parts_to_delay_insert: 150
+        parts_to_throw_insert: 300
+      query_log:
+        partition_by: toYYYYMM(event_date)
+      max_concurrent_queries: 200
+      max_connections: 4096
+    extraUsersConfig:
+      users:
+        readonly:
+          profile: readonly
+          quota: default
+          networks:
+            ip: "::/0"
+
+keeperCluster:
+  enabled: true
+  replicas: 5
+
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 30Gi
+
+  settings:
+    logger:
+      level: information

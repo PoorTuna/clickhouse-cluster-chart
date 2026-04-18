@@ -1,0 +1,123 @@
+{{- if .Values.networkPolicy.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "clickhouse-cluster.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+  {{- $annot := include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.commonAnnotations "extra" nil) }}
+  {{- if $annot }}
+  annotations:
+    {{- $annot | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
+      app.kubernetes.io/component: clickhouse
+  policyTypes:
+    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+  {{- if has "Ingress" .Values.networkPolicy.policyTypes }}
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
+              app.kubernetes.io/component: clickhouse
+        {{- if .Values.networkPolicy.ingress.allowKeeper }}
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
+              app.kubernetes.io/component: keeper
+        {{- end }}
+        {{- range .Values.networkPolicy.ingress.fromNamespaces }}
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+        {{- with .Values.networkPolicy.ingress.fromPodSelector }}
+        - podSelector:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+  {{- end }}
+  {{- if has "Egress" .Values.networkPolicy.policyTypes }}
+  egress:
+    {{- if .Values.networkPolicy.egress.allowDNS }}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
+              app.kubernetes.io/component: keeper
+    {{- range .Values.networkPolicy.egress.toCIDRs }}
+    - to:
+        - ipBlock:
+            cidr: {{ . }}
+    {{- end }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
+              app.kubernetes.io/component: clickhouse
+  {{- end }}
+{{- if .Values.keeperCluster.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "clickhouse-cluster.keeperFullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+  {{- if $annot }}
+  annotations:
+    {{- $annot | nindent 4 }}
+  {{- end }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
+      app.kubernetes.io/component: keeper
+  policyTypes:
+    {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
+  {{- if has "Ingress" .Values.networkPolicy.policyTypes }}
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
+              app.kubernetes.io/component: keeper
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
+              app.kubernetes.io/component: clickhouse
+  {{- end }}
+  {{- if has "Egress" .Values.networkPolicy.policyTypes }}
+  egress:
+    {{- if .Values.networkPolicy.egress.allowDNS }}
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    {{- end }}
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
+              app.kubernetes.io/component: keeper
+  {{- end }}
+{{- end }}
+{{- end }}

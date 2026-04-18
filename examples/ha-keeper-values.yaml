@@ -1,0 +1,38 @@
+# External keeper: deploys ClickHouseCluster only, pointing to an existing KeeperCluster
+
+clickhouseCluster:
+  enabled: true
+  shards: 2
+  replicas: 2
+
+  # Point to an existing KeeperCluster or ZooKeeper ensemble
+  keeperClusterRef:
+    name: shared-keeper-cluster
+
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+      limits:
+        cpu: "4"
+        memory: "16Gi"
+
+  dataVolumeClaimSpec:
+    storageClassName: ssd
+    resources:
+      requests:
+        storage: 200Gi
+
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
+
+  settings:
+    enableDatabaseSync: true
+    logger:
+      level: information
+
+# Keeper is managed externally — do not deploy
+keeperCluster:
+  enabled: false

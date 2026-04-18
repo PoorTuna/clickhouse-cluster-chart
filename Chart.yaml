@@ -1,0 +1,29 @@
+apiVersion: v2
+name: clickhouse-cluster
+description: >-
+  Deploys a ClickHouse cluster (ClickHouseCluster + KeeperCluster CRs) on top of the
+  official ClickHouse Kubernetes operator. Includes optional Prometheus ServiceMonitors,
+  PrometheusRules, Grafana dashboards, network policies, and managed secrets.
+type: application
+version: 0.1.0
+appVersion: "0.0.3"
+kubeVersion: ">=1.28.0-0"
+home: https://clickhouse.com
+icon: https://clickhouse.com/images/ch_logo.svg
+sources:
+  - https://github.com/ClickHouse/clickhouse-operator
+keywords:
+  - clickhouse
+  - database
+  - olap
+  - analytics
+  - keeper
+  - zookeeper
+  - operator
+maintainers:
+  - name: PoorTuna
+    url: https://github.com/PoorTuna
+annotations:
+  artifacthub.io/operator: "false"
+  artifacthub.io/operatorCapabilities: "Seamless Upgrades"
+  artifacthub.io/license: MIT

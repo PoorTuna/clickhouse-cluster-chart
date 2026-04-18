@@ -1,0 +1,54 @@
+
+=============================================================================
+  ClickHouse Cluster — {{ include "clickhouse-cluster.fullname" . }}
+=============================================================================
+
+{{- if .Values.clickhouseCluster.enabled }}
+
+  ClickHouseCluster: {{ include "clickhouse-cluster.fullname" . }}
+    Shards:   {{ .Values.clickhouseCluster.shards }}
+    Replicas: {{ .Values.clickhouseCluster.replicas }}
+    Storage:  {{ .Values.clickhouseCluster.dataVolumeClaimSpec.resources.requests.storage }}
+
+  To check the cluster status:
+
+    kubectl get clickhouseclusters {{ include "clickhouse-cluster.fullname" . }} -n {{ .Release.Namespace }}
+    kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }}
+
+  To connect with clickhouse-client:
+
+    kubectl exec -it $(kubectl get pods -l app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=clickhouse -n {{ .Release.Namespace }} -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -- clickhouse-client
+
+{{- end }}
+
+{{- if .Values.keeperCluster.enabled }}
+
+  KeeperCluster: {{ include "clickhouse-cluster.keeperFullname" . }}
+    Replicas: {{ .Values.keeperCluster.replicas }}
+    Storage:  {{ .Values.keeperCluster.dataVolumeClaimSpec.resources.requests.storage }}
+
+  To check Keeper status:
+
+    kubectl get keeperclusters {{ include "clickhouse-cluster.keeperFullname" . }} -n {{ .Release.Namespace }}
+
+{{- end }}
+
+{{- if .Values.serviceMonitor.enabled }}
+
+  Prometheus ServiceMonitor for ClickHouse is enabled.
+{{- end }}
+{{- if .Values.keeperServiceMonitor.enabled }}
+  Prometheus ServiceMonitor for Keeper is enabled.
+{{- end }}
+{{- if .Values.prometheusRule.enabled }}
+  PrometheusRule with alert rules is enabled.
+{{- end }}
+{{- if .Values.grafanaDashboard.enabled }}
+  Grafana dashboard ConfigMap is enabled.
+{{- end }}
+
+  To run Helm tests:
+
+    helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+
+=============================================================================

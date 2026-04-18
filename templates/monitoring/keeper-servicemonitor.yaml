@@ -1,0 +1,53 @@
+{{- if .Values.keeperServiceMonitor.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "clickhouse-cluster.keeperFullname" . }}
+  namespace: {{ .Values.keeperServiceMonitor.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper
+    {{- with .Values.keeperServiceMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annot := include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.commonAnnotations "extra" nil) }}
+  {{- if $annot }}
+  annotations:
+    {{- $annot | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.keeperServiceMonitor.selector }}
+  selector:
+    {{- toYaml .Values.keeperServiceMonitor.selector | nindent 4 }}
+  {{- else }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
+      app.kubernetes.io/component: keeper
+  {{- end }}
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}
+  endpoints:
+    - port: {{ .Values.keeperServiceMonitor.port }}
+      path: {{ .Values.keeperServiceMonitor.path }}
+      scheme: {{ .Values.keeperServiceMonitor.scheme }}
+      {{- with .Values.keeperServiceMonitor.interval }}
+      interval: {{ . }}
+      {{- end }}
+      {{- with .Values.keeperServiceMonitor.scrapeTimeout }}
+      scrapeTimeout: {{ . }}
+      {{- end }}
+      {{- with .Values.keeperServiceMonitor.tlsConfig }}
+      tlsConfig:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.keeperServiceMonitor.relabelings }}
+      relabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.keeperServiceMonitor.metricRelabelings }}
+      metricRelabelings:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

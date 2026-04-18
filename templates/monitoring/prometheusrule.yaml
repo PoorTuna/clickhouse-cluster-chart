@@ -1,0 +1,105 @@
+{{- if .Values.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "clickhouse-cluster.fullname" . }}
+  namespace: {{ .Values.prometheusRule.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    {{- with .Values.prometheusRule.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annot := include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.commonAnnotations "extra" nil) }}
+  {{- if $annot }}
+  annotations:
+    {{- $annot | nindent 4 }}
+  {{- end }}
+spec:
+  groups:
+    {{- if .Values.prometheusRule.defaultRules.enabled }}
+    - name: clickhouse-cluster-{{ include "clickhouse-cluster.fullname" . }}
+      rules:
+        - alert: ClickHouseClusterUnready
+          expr: |
+            kube_customresource_clickhousecluster_status_ready{name="{{ include "clickhouse-cluster.fullname" . }}"} == 0
+          for: 5m
+          labels:
+            severity: critical
+            cluster: {{ include "clickhouse-cluster.fullname" . }}
+          annotations:
+            summary: "ClickHouse cluster {{ include "clickhouse-cluster.fullname" . }} is not ready"
+            description: >-
+              The ClickHouseCluster resource {{ include "clickhouse-cluster.fullname" . }} in
+              namespace {{ "{{ $labels.namespace }}" }} has not been ready for more than 5 minutes.
+
+        - alert: ClickHouseReplicaDown
+          expr: |
+            ClickHouseMetrics_ReplicasMaxAbsoluteDelay{cluster="{{ include "clickhouse-cluster.fullname" . }}"} > 300
+          for: 5m
+          labels:
+            severity: warning
+            cluster: {{ include "clickhouse-cluster.fullname" . }}
+          annotations:
+            summary: "ClickHouse replica delay exceeds 5 minutes"
+            description: >-
+              Replica {{ "{{ $labels.instance }}" }} in cluster {{ include "clickhouse-cluster.fullname" . }}
+              has an absolute replication delay exceeding 300 seconds.
+
+        - alert: ClickHouseReplicationLag
+          expr: |
+            ClickHouseAsyncMetrics_ReplicaMaxQueueSize{cluster="{{ include "clickhouse-cluster.fullname" . }}"} > 100
+          for: 10m
+          labels:
+            severity: warning
+            cluster: {{ include "clickhouse-cluster.fullname" . }}
+          annotations:
+            summary: "ClickHouse replication queue size is high"
+            description: >-
+              Replica {{ "{{ $labels.instance }}" }} in cluster {{ include "clickhouse-cluster.fullname" . }}
+              has a replication queue size exceeding 100 entries.
+
+        - alert: ClickHouseKeeperSessionExpired
+          expr: |
+            increase(ClickHouseProfileEvents_KeeperSessionExpired{cluster="{{ include "clickhouse-cluster.fullname" . }}"}[5m]) > 0
+          for: 0m
+          labels:
+            severity: critical
+            cluster: {{ include "clickhouse-cluster.fullname" . }}
+          annotations:
+            summary: "ClickHouse Keeper session expired"
+            description: >-
+              Instance {{ "{{ $labels.instance }}" }} in cluster {{ include "clickhouse-cluster.fullname" . }}
+              experienced a Keeper session expiration.
+
+        - alert: ClickHouseDiskUsageHigh
+          expr: |
+            (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+          for: 15m
+          labels:
+            severity: warning
+            cluster: {{ include "clickhouse-cluster.fullname" . }}
+          annotations:
+            summary: "Disk usage exceeds 85%"
+            description: >-
+              Instance {{ "{{ $labels.instance }}" }} disk usage is above 85%.
+
+        - alert: ClickHouseQueryFailureRate
+          expr: |
+            rate(ClickHouseProfileEvents_FailedQuery{cluster="{{ include "clickhouse-cluster.fullname" . }}"}[5m]) > 0.05
+          for: 5m
+          labels:
+            severity: warning
+            cluster: {{ include "clickhouse-cluster.fullname" . }}
+          annotations:
+            summary: "ClickHouse query failure rate is elevated"
+            description: >-
+              Cluster {{ include "clickhouse-cluster.fullname" . }} is experiencing more than 0.05
+              failed queries per second.
+    {{- end }}
+
+    {{- if .Values.prometheusRule.additionalRules }}
+    - name: clickhouse-cluster-{{ include "clickhouse-cluster.fullname" . }}-custom
+      rules:
+        {{- toYaml .Values.prometheusRule.additionalRules | nindent 8 }}
+    {{- end }}
+{{- end }}

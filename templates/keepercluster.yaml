@@ -1,0 +1,188 @@
+{{- include "clickhouse-cluster.validate" . }}
+{{- if .Values.keeperCluster.enabled }}
+apiVersion: clickhouse.com/v1alpha1
+kind: KeeperCluster
+metadata:
+  name: {{ include "clickhouse-cluster.keeperFullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    {{- with .Values.keeperCluster.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annot := include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.commonAnnotations "extra" .Values.keeperCluster.annotations) }}
+  {{- if $annot }}
+  annotations:
+    {{- $annot | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.keeperCluster.replicas }}
+
+  {{- with .Values.keeperCluster.clusterDomain }}
+  clusterDomain: {{ . | quote }}
+  {{- end }}
+
+  {{- with .Values.keeperCluster.upgradeChannel }}
+  upgradeChannel: {{ . | quote }}
+  {{- end }}
+
+  {{- with .Values.keeperCluster.labels }}
+  labels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- with .Values.keeperCluster.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- $ct := .Values.keeperCluster.containerTemplate }}
+  {{- if or $ct.image.repository $ct.image.tag $ct.resources $ct.env $ct.securityContext $ct.volumeMounts }}
+  containerTemplate:
+    {{- if or $ct.image.repository $ct.image.tag }}
+    image:
+      {{- with $ct.image.repository }}
+      repository: {{ . | quote }}
+      {{- end }}
+      {{- with $ct.image.tag }}
+      tag: {{ . | quote }}
+      {{- end }}
+      {{- with $ct.image.pullPolicy }}
+      imagePullPolicy: {{ . }}
+      {{- end }}
+    {{- end }}
+    {{- with $ct.resources }}
+    resources:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $ct.env }}
+    env:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $ct.securityContext }}
+    securityContext:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $ct.volumeMounts }}
+    volumeMounts:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+
+  {{- with .Values.keeperCluster.dataVolumeClaimSpec }}
+  dataVolumeClaimSpec:
+    {{- with .accessModes }}
+    accessModes:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .storageClassName }}
+    storageClassName: {{ . | quote }}
+    {{- end }}
+    {{- with .resources }}
+    resources:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  {{- end }}
+
+  {{- if .Values.keeperCluster.podDisruptionBudget.enabled }}
+  podDisruptionBudget:
+    {{- with .Values.keeperCluster.podDisruptionBudget.minAvailable }}
+    minAvailable: {{ . }}
+    {{- end }}
+    {{- with .Values.keeperCluster.podDisruptionBudget.maxUnavailable }}
+    maxUnavailable: {{ . }}
+    {{- end }}
+    {{- with .Values.keeperCluster.podDisruptionBudget.policy }}
+    policy: {{ . }}
+    {{- end }}
+    {{- with .Values.keeperCluster.podDisruptionBudget.unhealthyPodEvictionPolicy }}
+    unhealthyPodEvictionPolicy: {{ . }}
+    {{- end }}
+  {{- end }}
+
+  {{- $pt := .Values.keeperCluster.podTemplate }}
+  {{- if or $pt.affinity $pt.nodeSelector $pt.tolerations $pt.topologySpreadConstraints $pt.priorityClassName $pt.securityContext $pt.imagePullSecrets $pt.initContainers $pt.volumes $pt.terminationGracePeriodSeconds }}
+  podTemplate:
+    {{- with $pt.affinity }}
+    affinity:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $pt.nodeSelector }}
+    nodeSelector:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $pt.tolerations }}
+    tolerations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $pt.topologySpreadConstraints }}
+    topologySpreadConstraints:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $pt.priorityClassName }}
+    priorityClassName: {{ . | quote }}
+    {{- end }}
+    {{- with $pt.securityContext }}
+    securityContext:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $pt.imagePullSecrets }}
+    imagePullSecrets:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $pt.initContainers }}
+    initContainers:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $pt.volumes }}
+    volumes:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with $pt.terminationGracePeriodSeconds }}
+    terminationGracePeriodSeconds: {{ . }}
+    {{- end }}
+  {{- end }}
+
+  settings:
+    logger:
+      level: {{ .Values.keeperCluster.settings.logger.level }}
+      {{- if not (eq (toString .Values.keeperCluster.settings.logger.logToFile) "") }}
+      logToFile: {{ .Values.keeperCluster.settings.logger.logToFile }}
+      {{- end }}
+      {{- with .Values.keeperCluster.settings.logger.size }}
+      size: {{ . | quote }}
+      {{- end }}
+      {{- with .Values.keeperCluster.settings.logger.count }}
+      count: {{ . }}
+      {{- end }}
+      {{- if .Values.keeperCluster.settings.logger.jsonLogs }}
+      jsonLogs: {{ .Values.keeperCluster.settings.logger.jsonLogs }}
+      {{- end }}
+
+    {{- if .Values.keeperCluster.settings.tls.enabled }}
+    tls:
+      enabled: true
+      {{- if .Values.keeperCluster.settings.tls.required }}
+      required: true
+      {{- end }}
+      {{- with .Values.keeperCluster.settings.tls.serverCertSecret }}
+      {{- if .name }}
+      serverCertSecret:
+        name: {{ .name }}
+        key: {{ .key | default "tls.crt" }}
+      {{- end }}
+      {{- end }}
+      {{- with .Values.keeperCluster.settings.tls.caBundle }}
+      {{- if .name }}
+      caBundle:
+        name: {{ .name }}
+        key: {{ .key | default "ca.crt" }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+
+    {{- with .Values.keeperCluster.settings.extraConfig }}
+    extraConfig:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+{{- end }}

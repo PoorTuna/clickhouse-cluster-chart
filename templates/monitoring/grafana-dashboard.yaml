@@ -1,0 +1,143 @@
+{{- if .Values.grafanaDashboard.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "clickhouse-cluster.fullname" . }}-grafana-dashboard
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    {{- with .Values.grafanaDashboard.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- if .Values.grafanaDashboard.folder }}
+    grafana_folder: {{ .Values.grafanaDashboard.folder | quote }}
+    {{- end }}
+    {{- $annot := include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.commonAnnotations "extra" .Values.grafanaDashboard.annotations) }}
+    {{- if $annot }}
+    {{- $annot | nindent 4 }}
+    {{- end }}
+data:
+  clickhouse-cluster-overview.json: |
+    {{- if .Values.grafanaDashboard.dashboardJson }}
+    {{ .Values.grafanaDashboard.dashboardJson | nindent 4 }}
+    {{- else }}
+    {
+      "annotations": { "list": [] },
+      "editable": true,
+      "fiscalYearStartMonth": 0,
+      "graphTooltip": 1,
+      "id": null,
+      "links": [],
+      "liveNow": false,
+      "panels": [
+        {
+          "title": "Cluster Ready Status",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "kube_customresource_clickhousecluster_status_ready{name=\"{{ include "clickhouse-cluster.fullname" . }}\"}",
+              "legendFormat": "Ready"
+            }
+          ]
+        },
+        {
+          "title": "Ready Replicas",
+          "type": "stat",
+          "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+          "targets": [
+            {
+              "expr": "kube_customresource_clickhousecluster_status_ready_replicas{name=\"{{ include "clickhouse-cluster.fullname" . }}\"}",
+              "legendFormat": "Replicas"
+            }
+          ]
+        },
+        {
+          "title": "Queries Per Second",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+          "targets": [
+            {
+              "expr": "rate(ClickHouseProfileEvents_Query{cluster=\"{{ include "clickhouse-cluster.fullname" . }}\"}[5m])",
+              "legendFormat": "{{`{{ instance }}`}}"
+            }
+          ]
+        },
+        {
+          "title": "Failed Queries Per Second",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+          "targets": [
+            {
+              "expr": "rate(ClickHouseProfileEvents_FailedQuery{cluster=\"{{ include "clickhouse-cluster.fullname" . }}\"}[5m])",
+              "legendFormat": "{{`{{ instance }}`}}"
+            }
+          ]
+        },
+        {
+          "title": "Memory Usage",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 12 },
+          "targets": [
+            {
+              "expr": "ClickHouseMetrics_MemoryTracking{cluster=\"{{ include "clickhouse-cluster.fullname" . }}\"}",
+              "legendFormat": "{{`{{ instance }}`}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": { "unit": "bytes" }
+          }
+        },
+        {
+          "title": "Replication Queue Size",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 12 },
+          "targets": [
+            {
+              "expr": "ClickHouseAsyncMetrics_ReplicaMaxQueueSize{cluster=\"{{ include "clickhouse-cluster.fullname" . }}\"}",
+              "legendFormat": "{{`{{ instance }}`}}"
+            }
+          ]
+        },
+        {
+          "title": "Active Connections",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 20 },
+          "targets": [
+            {
+              "expr": "ClickHouseMetrics_TCPConnection{cluster=\"{{ include "clickhouse-cluster.fullname" . }}\"}",
+              "legendFormat": "{{`{{ instance }}`}} - TCP"
+            },
+            {
+              "expr": "ClickHouseMetrics_HTTPConnection{cluster=\"{{ include "clickhouse-cluster.fullname" . }}\"}",
+              "legendFormat": "{{`{{ instance }}`}} - HTTP"
+            }
+          ]
+        },
+        {
+          "title": "Keeper Session Expirations",
+          "type": "timeseries",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 20 },
+          "targets": [
+            {
+              "expr": "increase(ClickHouseProfileEvents_KeeperSessionExpired{cluster=\"{{ include "clickhouse-cluster.fullname" . }}\"}[5m])",
+              "legendFormat": "{{`{{ instance }}`}}"
+            }
+          ]
+        }
+      ],
+      "schemaVersion": 39,
+      "style": "dark",
+      "tags": ["clickhouse", "database"],
+      "templating": { "list": [] },
+      "time": { "from": "now-6h", "to": "now" },
+      "timepicker": {},
+      "timezone": "",
+      "title": "ClickHouse Cluster — {{ include "clickhouse-cluster.fullname" . }}",
+      "uid": "clickhouse-{{ include "clickhouse-cluster.fullname" . }}",
+      "version": 1,
+      "weekStart": ""
+    }
+    {{- end }}
+{{- end }}

@@ -1,0 +1,49 @@
+{{- if and .Values.tests.enabled .Values.clickhouseCluster.enabled }}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "clickhouse-cluster.fullname" . }}-test-topology
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    app.kubernetes.io/component: test
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    "helm.sh/hook-weight": "5"
+spec:
+  restartPolicy: Never
+  containers:
+    - name: clickhouse-client
+      image: "{{ .Values.tests.image.repository }}:{{ .Values.tests.image.tag }}"
+      imagePullPolicy: {{ .Values.tests.image.pullPolicy }}
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "Verifying cluster topology..."
+
+          EXPECTED_SHARDS={{ .Values.clickhouseCluster.shards }}
+          EXPECTED_REPLICAS={{ .Values.clickhouseCluster.replicas }}
+
+          # Query system.clusters for shard/replica info
+          RESULT=$(clickhouse-client \
+            --host {{ include "clickhouse-cluster.fullname" . }} \
+            --port 9000 \
+            --query "SELECT uniqExact(shard_num) AS shards, uniqExact(replica_num) AS replicas FROM system.clusters WHERE cluster NOT IN ('test_shard_localhost', 'test_cluster_two_shards_localhost', 'test_cluster_one_shard_three_replicas_localhost', 'test_cluster_two_shards_diff', 'test_unavailable_shard') FORMAT TabSeparated" 2>/dev/null)
+
+          ACTUAL_SHARDS=$(echo "$RESULT" | cut -f1)
+          ACTUAL_REPLICAS=$(echo "$RESULT" | cut -f2)
+
+          echo "Expected: ${EXPECTED_SHARDS} shards, ${EXPECTED_REPLICAS} replicas"
+          echo "Actual:   ${ACTUAL_SHARDS} shards, ${ACTUAL_REPLICAS} replicas"
+
+          if [ "$ACTUAL_SHARDS" -ge "1" ] && [ "$ACTUAL_REPLICAS" -ge "1" ]; then
+            echo "Topology test passed."
+            exit 0
+          fi
+
+          echo "Topology test failed: unexpected cluster configuration"
+          exit 1
+{{- end }}

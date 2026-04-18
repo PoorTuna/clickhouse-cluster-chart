@@ -1,0 +1,89 @@
+# Monitoring: ServiceMonitors, PrometheusRule, Grafana dashboard
+# Requires: prometheus-operator, Grafana with sidecar
+
+clickhouseCluster:
+  enabled: true
+  shards: 2
+  replicas: 2
+
+  containerTemplate:
+    resources:
+      requests:
+        cpu: "2"
+        memory: "4Gi"
+      limits:
+        cpu: "4"
+        memory: "8Gi"
+
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 100Gi
+
+  settings:
+    logger:
+      level: information
+      jsonLogs: true
+
+keeperCluster:
+  enabled: true
+  replicas: 3
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 10Gi
+
+# ClickHouse ServiceMonitor
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  scrapeTimeout: 10s
+  port: metrics
+  path: /metrics
+  scheme: http
+  labels:
+    release: kube-prometheus-stack
+
+# Keeper ServiceMonitor
+keeperServiceMonitor:
+  enabled: true
+  interval: 30s
+  scrapeTimeout: 10s
+  port: metrics
+  path: /metrics
+  scheme: http
+  labels:
+    release: kube-prometheus-stack
+
+# Alert rules
+prometheusRule:
+  enabled: true
+  labels:
+    release: kube-prometheus-stack
+  defaultRules:
+    enabled: true
+  additionalRules:
+    - alert: ClickHouseSlowQueries
+      expr: rate(ClickHouseProfileEvents_SlowRead[5m]) > 0.1
+      for: 10m
+      labels:
+        severity: warning
+      annotations:
+        summary: "ClickHouse slow queries detected"
+        description: "Instance {{ $labels.instance }} has elevated slow query rate."
+
+    - alert: ClickHouseHighMergeRate
+      expr: rate(ClickHouseProfileEvents_MergedRows[5m]) > 1000000
+      for: 5m
+      labels:
+        severity: info
+      annotations:
+        summary: "ClickHouse merge rate is high"
+        description: "Instance {{ $labels.instance }} is merging over 1M rows/sec."
+
+# Grafana dashboard
+grafanaDashboard:
+  enabled: true
+  labels:
+    grafana_dashboard: "1"
+  folder: "ClickHouse"

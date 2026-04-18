@@ -1,0 +1,18 @@
+# Minimal: 1 shard, 1 replica, 1 keeper
+
+clickhouseCluster:
+  enabled: true
+  shards: 1
+  replicas: 1
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 10Gi
+
+keeperCluster:
+  enabled: true
+  replicas: 1
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 5Gi
