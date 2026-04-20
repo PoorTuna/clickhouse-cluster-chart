@@ -328,8 +328,7 @@
                 "serverCertSecret": {
                   "type": "object",
                   "properties": {
-                    "name": { "type": "string" },
-                    "key": { "type": "string" }
+                    "name": { "type": "string" }
                   },
                   "additionalProperties": false
                 },
@@ -538,8 +537,7 @@
                 "serverCertSecret": {
                   "type": "object",
                   "properties": {
-                    "name": { "type": "string" },
-                    "key": { "type": "string" }
+                    "name": { "type": "string" }
                   },
                   "additionalProperties": false
                 },

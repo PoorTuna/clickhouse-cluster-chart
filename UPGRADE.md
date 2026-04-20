@@ -1,5 +1,14 @@
 # Upgrade Guide
 
+## 0.2.2
+
+Fixes two CRD-schema mismatches that caused server-side apply to reject both CRs.
+
+- `spec.containerTemplate.imagePullPolicy` is now emitted as a sibling of `image` (previously nested under `image.imagePullPolicy`, which is not a valid field on the `ContainerImage` type). Applies to both `ClickHouseCluster` and `KeeperCluster`.
+- `spec.settings.tls.serverCertSecret.key` is no longer emitted — the CRD's `serverCertSecret` is a `LocalObjectReference` (name-only); the operator hardcodes the cert-manager layout (`tls.crt` / `tls.key`). The matching `key` field has been removed from `values.yaml`, `values.schema.json`, and `examples/production-values.yaml`. The `caBundle` field still accepts `key` (it's a `SecretKeySelector`) — unchanged.
+
+Users who previously set `clickhouseCluster.settings.tls.serverCertSecret.key` or `keeperCluster.settings.tls.serverCertSecret.key` in their values should remove it; the schema now rejects it.
+
 ## 0.2.1
 
 Fixes resource-name collisions introduced in 0.2.0 and corrects a default.

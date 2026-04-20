@@ -87,7 +87,6 @@ clickhouseCluster:
       required: true
       serverCertSecret:
         name: clickhouse-tls
-        key: tls.crt
       caBundle:
         name: clickhouse-tls
         key: ca.crt

@@ -37,7 +37,7 @@ spec:
   {{- end }}
 
   {{- $ct := .Values.keeperCluster.containerTemplate }}
-  {{- if or $ct.image.repository $ct.image.tag $ct.resources $ct.env $ct.securityContext $ct.volumeMounts }}
+  {{- if or $ct.image.repository $ct.image.tag $ct.image.pullPolicy $ct.resources $ct.env $ct.securityContext $ct.volumeMounts }}
   containerTemplate:
     {{- if or $ct.image.repository $ct.image.tag }}
     image:
@@ -47,9 +47,9 @@ spec:
       {{- with $ct.image.tag }}
       tag: {{ . | quote }}
       {{- end }}
-      {{- with $ct.image.pullPolicy }}
-      imagePullPolicy: {{ . }}
-      {{- end }}
+    {{- end }}
+    {{- with $ct.image.pullPolicy }}
+    imagePullPolicy: {{ . }}
     {{- end }}
     {{- with $ct.resources }}
     resources:
@@ -169,7 +169,6 @@ spec:
       {{- if .name }}
       serverCertSecret:
         name: {{ .name }}
-        key: {{ .key | default "tls.crt" }}
       {{- end }}
       {{- end }}
       {{- with .Values.keeperCluster.settings.tls.caBundle }}
