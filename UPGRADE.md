@@ -1,5 +1,17 @@
 # Upgrade Guide
 
+## 0.2.7
+
+Ships a supplemental headless Service so the keeper `ServiceMonitor` can actually find a target.
+
+The official ClickHouse operator's Keeper pod exposes Prometheus metrics on port `9090` (container port name `prometheus`, path `/metrics`, injected via a hardcoded top-level `<prometheus>` config block — see `internal/controller/keeper/templates.go`). However, the operator's generated headless Service (`<CR>-keeper-headless`) only opens `raft-ipc` (9234), `keeper` (2181), and optionally `keeper-secure` (2281). Port 9090 is **not** on that Service.
+
+A `ServiceMonitor` selects by Service port, so in 0.2.6 and earlier the keeper ServiceMonitor targeted a port that no Service exposed — it produced zero targets. This release adds a chart-owned headless Service `<keeperObjectName>-metrics` that selects the operator's keeper Pods (`app: <CR>-keeper`) and publishes port `prometheus`/9090 via `targetPort: prometheus`. `publishNotReadyAddresses: true` so scrapes keep flowing during rollouts.
+
+The keeper ServiceMonitor template is unchanged — its default `matchLabels: app: <CR>-keeper` selector matches both the operator's headless Service and the new one, but only the new one carries a `prometheus` port so only it contributes endpoints. No duplicate scrapes.
+
+The Service is gated on the same `keeperServiceMonitor.enabled` toggle as the ServiceMonitor, so they travel together.
+
 ## 0.2.6
 
 The default `cluster` label stamp moved from `relabelings` (target-level) to `metricRelabelings` (per-metric, applied at ingestion).

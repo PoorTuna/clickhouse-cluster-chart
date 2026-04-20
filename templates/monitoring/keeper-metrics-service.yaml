@@ -1,0 +1,27 @@
+{{- if .Values.keeperServiceMonitor.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "clickhouse-cluster.keeperObjectName" . }}-metrics
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keeper-metrics
+    app: {{ include "clickhouse-cluster.keeperFullname" . }}-keeper
+  {{- $annot := include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.commonAnnotations "extra" nil) }}
+  {{- if $annot }}
+  annotations:
+    {{- $annot | nindent 4 }}
+  {{- end }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    app: {{ include "clickhouse-cluster.keeperFullname" . }}-keeper
+  ports:
+    - name: prometheus
+      port: 9090
+      targetPort: prometheus
+      protocol: TCP
+{{- end }}
