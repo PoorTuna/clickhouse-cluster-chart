@@ -2,7 +2,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: {{ include "clickhouse-cluster.keeperFullname" . }}
+  name: {{ include "clickhouse-cluster.keeperObjectName" . }}
   namespace: {{ .Values.keeperServiceMonitor.namespace | default .Release.Namespace }}
   labels:
     {{- include "clickhouse-cluster.labels" . | nindent 4 }}

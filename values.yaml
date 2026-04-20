@@ -311,7 +311,7 @@ serviceMonitor:
   namespace: ""
   interval: 30s
   scrapeTimeout: 10s
-  port: metrics
+  port: prometheus
   path: /metrics
   scheme: http
   # -- Labels for Prometheus serviceMonitorSelector matching.
@@ -328,7 +328,7 @@ keeperServiceMonitor:
   namespace: ""
   interval: 30s
   scrapeTimeout: 10s
-  port: metrics
+  port: prometheus
   path: /metrics
   scheme: http
   labels: {}

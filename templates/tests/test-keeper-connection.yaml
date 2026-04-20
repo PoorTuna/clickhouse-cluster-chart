@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: {{ include "clickhouse-cluster.keeperFullname" . }}-test-connection
+  name: {{ include "clickhouse-cluster.keeperObjectName" . }}-test-connection
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "clickhouse-cluster.labels" . | nindent 4 }}

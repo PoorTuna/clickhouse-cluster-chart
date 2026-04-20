@@ -36,6 +36,20 @@ Create the name for the KeeperCluster resource.
 {{- end }}
 
 {{/*
+Name prefix for keeper-related K8s objects (ServiceMonitor, NetworkPolicy,
+test Pod, etc.) that must be unique from ClickHouse-side objects of the
+same kind. Defaults to "<release-name>-keeper". If keeperFullnameOverride
+is set, that value is used verbatim (no extra "-keeper" suffix).
+*/}}
+{{- define "clickhouse-cluster.keeperObjectName" -}}
+{{- if .Values.keeperFullnameOverride }}
+{{- .Values.keeperFullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-keeper" .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+
+{{/*
 Resolve the KeeperCluster reference name. If keeperCluster is enabled and
 the user has not specified a name, auto-derive from the release.
 */}}
