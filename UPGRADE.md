@@ -1,5 +1,13 @@
 # Upgrade Guide
 
+## 0.2.6
+
+The default `cluster` label stamp moved from `relabelings` (target-level) to `metricRelabelings` (per-metric, applied at ingestion).
+
+In 0.2.5 the `cluster` label was added via target relabeling, but in practice several Prometheus operator setups don't propagate custom target labels to scraped metrics — the label appeared on `/targets` but was absent from the time series. `metricRelabelings` runs per-metric immediately before ingestion and reliably stamps `cluster=<CR-name>` on every series.
+
+User-supplied `.Values.serviceMonitor.metricRelabelings` / `.Values.keeperServiceMonitor.metricRelabelings` still apply and are appended after the default entry.
+
 ## 0.2.5
 
 Both ServiceMonitors now stamp a `cluster` label on every scraped series.
