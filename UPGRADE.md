@@ -1,5 +1,14 @@
 # Upgrade Guide
 
+## 0.2.5
+
+Both ServiceMonitors now stamp a `cluster` label on every scraped series.
+
+- ClickHouse metrics: `cluster=<CR-name>` (from `clickhouse-cluster.fullname`).
+- Keeper metrics: `cluster=<CR-name>` (from `clickhouse-cluster.keeperFullname`).
+
+This is needed because the bundled Grafana dashboard and PrometheusRule both query metrics with `{cluster="<CR-name>"}` — without the label, queries returned empty. Implemented as a default `relabelings` entry in each ServiceMonitor, prepended before any user-supplied `serviceMonitor.relabelings` / `keeperServiceMonitor.relabelings`. Users who want to override can still set their own relabelings; the default `cluster` stamp will remain unless they explicitly drop it.
+
 ## 0.2.4
 
 Fixes the `NetworkPolicy` `podSelector` label mismatch flagged as a known issue in 0.2.3.

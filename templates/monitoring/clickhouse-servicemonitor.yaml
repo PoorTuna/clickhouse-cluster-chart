@@ -41,10 +41,13 @@ spec:
       tlsConfig:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with .Values.serviceMonitor.relabelings }}
       relabelings:
+        - action: replace
+          targetLabel: cluster
+          replacement: {{ include "clickhouse-cluster.fullname" . | quote }}
+        {{- with .Values.serviceMonitor.relabelings }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
       {{- with .Values.serviceMonitor.metricRelabelings }}
       metricRelabelings:
         {{- toYaml . | nindent 8 }}
