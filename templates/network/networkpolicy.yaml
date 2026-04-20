@@ -16,8 +16,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
-      app.kubernetes.io/component: clickhouse
+      app: {{ include "clickhouse-cluster.fullname" . }}-clickhouse
   policyTypes:
     {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
   {{- if has "Ingress" .Values.networkPolicy.policyTypes }}
@@ -25,13 +24,11 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
-              app.kubernetes.io/component: clickhouse
+              app: {{ include "clickhouse-cluster.fullname" . }}-clickhouse
         {{- if .Values.networkPolicy.ingress.allowKeeper }}
         - podSelector:
             matchLabels:
-              app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
-              app.kubernetes.io/component: keeper
+              app: {{ include "clickhouse-cluster.keeperFullname" . }}-keeper
         {{- end }}
         {{- range .Values.networkPolicy.ingress.fromNamespaces }}
         - namespaceSelector:
@@ -56,8 +53,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
-              app.kubernetes.io/component: keeper
+              app: {{ include "clickhouse-cluster.keeperFullname" . }}-keeper
     {{- range .Values.networkPolicy.egress.toCIDRs }}
     - to:
         - ipBlock:
@@ -66,8 +62,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
-              app.kubernetes.io/component: clickhouse
+              app: {{ include "clickhouse-cluster.fullname" . }}-clickhouse
   {{- end }}
 {{- if .Values.keeperCluster.enabled }}
 ---
@@ -86,8 +81,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
-      app.kubernetes.io/component: keeper
+      app: {{ include "clickhouse-cluster.keeperFullname" . }}-keeper
   policyTypes:
     {{- toYaml .Values.networkPolicy.policyTypes | nindent 4 }}
   {{- if has "Ingress" .Values.networkPolicy.policyTypes }}
@@ -95,12 +89,10 @@ spec:
     - from:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
-              app.kubernetes.io/component: keeper
+              app: {{ include "clickhouse-cluster.keeperFullname" . }}-keeper
         - podSelector:
             matchLabels:
-              app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
-              app.kubernetes.io/component: clickhouse
+              app: {{ include "clickhouse-cluster.fullname" . }}-clickhouse
   {{- end }}
   {{- if has "Egress" .Values.networkPolicy.policyTypes }}
   egress:
@@ -116,8 +108,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/instance: {{ include "clickhouse-cluster.keeperFullname" . }}
-              app.kubernetes.io/component: keeper
+              app: {{ include "clickhouse-cluster.keeperFullname" . }}-keeper
   {{- end }}
 {{- end }}
 {{- end }}

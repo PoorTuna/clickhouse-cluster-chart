@@ -1,5 +1,13 @@
 # Upgrade Guide
 
+## 0.2.4
+
+Fixes the `NetworkPolicy` `podSelector` label mismatch flagged as a known issue in 0.2.3.
+
+- All `podSelector.matchLabels` pairs across both NetworkPolicies now use `app: <CR-name>-clickhouse` / `app: <CR-name>-keeper` — the same label the operator puts on Pods. The previous `app.kubernetes.io/instance` + `app.kubernetes.io/component` matchers matched zero Pods, so NetworkPolicies were no-ops.
+
+If you previously had `networkPolicy.enabled: true` and were expecting traffic to be constrained, note that in 0.2.3 and earlier the policies silently allowed everything because nothing matched. Re-validate your connectivity model on upgrade.
+
 ## 0.2.3
 
 Fixes ServiceMonitor selectors and test-Pod hostnames to match the labels and Service names the official ClickHouse operator actually creates.
