@@ -12,6 +12,10 @@
       "type": "string",
       "description": "Override the full release name used in resource metadata."
     },
+    "keeperFullnameOverride": {
+      "type": "string",
+      "description": "Override the KeeperCluster CR name. Defaults to the release name."
+    },
     "commonLabels": {
       "type": "object",
       "description": "Common labels applied to all resources.",

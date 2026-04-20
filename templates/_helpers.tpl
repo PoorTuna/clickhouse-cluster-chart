@@ -19,7 +19,7 @@ a full name.
 {{- if contains $name .Release.Name }}
 {{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- else }}
-{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
 {{- end }}
@@ -28,7 +28,11 @@ a full name.
 Create the name for the KeeperCluster resource.
 */}}
 {{- define "clickhouse-cluster.keeperFullname" -}}
-{{- printf "%s-keeper" (include "clickhouse-cluster.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- if .Values.keeperFullnameOverride }}
+{{- .Values.keeperFullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- end }}
 {{- end }}
 
 {{/*

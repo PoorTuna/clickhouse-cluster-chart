@@ -7,6 +7,9 @@ nameOverride: ""
 # -- Override the full release name used in resource metadata.
 fullnameOverride: ""
 
+# -- Override the KeeperCluster CR name. Defaults to the release name.
+keeperFullnameOverride: ""
+
 # -- Common labels applied to all resources.
 commonLabels: {}
 
