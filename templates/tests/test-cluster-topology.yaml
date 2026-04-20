@@ -29,7 +29,7 @@ spec:
 
           # Query system.clusters for shard/replica info
           RESULT=$(clickhouse-client \
-            --host {{ include "clickhouse-cluster.fullname" . }} \
+            --host {{ include "clickhouse-cluster.fullname" . }}-clickhouse-headless \
             --port 9000 \
             --query "SELECT uniqExact(shard_num) AS shards, uniqExact(replica_num) AS replicas FROM system.clusters WHERE cluster NOT IN ('test_shard_localhost', 'test_cluster_two_shards_localhost', 'test_cluster_one_shard_three_replicas_localhost', 'test_cluster_two_shards_diff', 'test_unavailable_shard') FORMAT TabSeparated" 2>/dev/null)
 

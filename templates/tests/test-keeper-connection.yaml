@@ -22,7 +22,7 @@ spec:
         - |
           set -e
           echo "Testing Keeper connectivity..."
-          KEEPER_HOST="{{ include "clickhouse-cluster.keeperFullname" . }}"
+          KEEPER_HOST="{{ include "clickhouse-cluster.keeperFullname" . }}-keeper-headless"
           KEEPER_PORT=2181
 
           # Send the "ruok" four-letter command

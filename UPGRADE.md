@@ -1,5 +1,14 @@
 # Upgrade Guide
 
+## 0.2.3
+
+Fixes ServiceMonitor selectors and test-Pod hostnames to match the labels and Service names the official ClickHouse operator actually creates.
+
+- ServiceMonitor `selector.matchLabels` changed to `app: <CR-name>-clickhouse` and `app: <CR-name>-keeper`. The previous `app.kubernetes.io/instance` + `app.kubernetes.io/component` pair matched zero Services because the operator's headless Services only carry the `app` label. ServiceMonitors were effectively no-ops before this fix.
+- Test Pod hosts now point at the real headless Service DNS names: `<CR-name>-clickhouse-headless` for the ClickHouse tests and `<CR-name>-keeper-headless` for the Keeper test. Previously the hosts resolved to non-existent Services and the Helm tests would fail.
+
+Known remaining issue (not fixed in this release): NetworkPolicy `podSelector.matchLabels` still uses the old `app.kubernetes.io/instance` + `app.kubernetes.io/component` labels, which don't match what the operator puts on Pods — the policies match zero Pods today and are no-ops. If you rely on NetworkPolicies, leave them disabled until this is fixed in a follow-up.
+
 ## 0.2.2
 
 Fixes two CRD-schema mismatches that caused server-side apply to reject both CRs.

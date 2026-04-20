@@ -22,8 +22,7 @@ spec:
   {{- else }}
   selector:
     matchLabels:
-      app.kubernetes.io/instance: {{ include "clickhouse-cluster.fullname" . }}
-      app.kubernetes.io/component: clickhouse
+      app: {{ include "clickhouse-cluster.fullname" . }}-clickhouse
   {{- end }}
   namespaceSelector:
     matchNames:
