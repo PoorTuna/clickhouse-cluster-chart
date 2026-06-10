@@ -1,5 +1,16 @@
 # Upgrade Guide
 
+## 0.2.8
+
+Adds optional external exposure of the ClickHouse HTTP interface (port `8123`) via a Kubernetes `Ingress` and/or an OpenShift `Route`.
+
+Both target the operator-created load-balanced Service `<CR-name>-clickhouse` (resolved by the new `clickhouse-cluster.clickhouseServiceName` helper). The backend Service name and port are overridable via `ingress.serviceName` / `ingress.servicePort` and `route.serviceName` / `route.targetPort` for non-default operator setups.
+
+- `templates/ingress.yaml` — `networking.k8s.io/v1` Ingress, gated on `ingress.enabled` (default `false`). Configurable `className`, `hosts[]` (host + paths with `pathType`), and `tls[]`.
+- `templates/route.yaml` — `route.openshift.io/v1` Route, gated on `route.enabled` (default `false`). Configurable `host`, `tls` termination block, and `wildcardPolicy`. Plain HTTP when `tls` is empty.
+
+Both resources carry the `app.kubernetes.io/component: clickhouse` label and merge `commonAnnotations`. No values changes required on upgrade — both toggles default off, so existing releases are unaffected. Enable whichever matches your platform; see [`examples/ingress-route-values.yaml`](./examples/ingress-route-values.yaml).
+
 ## 0.2.7
 
 Ships a supplemental headless Service so the keeper `ServiceMonitor` can actually find a target.

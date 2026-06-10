@@ -33,6 +33,24 @@
 
 {{- end }}
 
+{{- if .Values.ingress.enabled }}
+
+  ClickHouse HTTP Ingress is enabled. Endpoints:
+  {{- $scheme := ternary "https" "http" (gt (len .Values.ingress.tls) 0) }}
+  {{- range .Values.ingress.hosts }}
+    {{- $host := .host }}
+    {{- range .paths }}
+    {{ $scheme }}://{{ $host }}{{ .path }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- if .Values.route.enabled }}
+
+  ClickHouse HTTP OpenShift Route is enabled. Get the host with:
+
+    kubectl get route {{ include "clickhouse-cluster.fullname" . }}-http -n {{ .Release.Namespace }} -o jsonpath='{.spec.host}'
+{{- end }}
+
 {{- if .Values.serviceMonitor.enabled }}
 
   Prometheus ServiceMonitor for ClickHouse is enabled.

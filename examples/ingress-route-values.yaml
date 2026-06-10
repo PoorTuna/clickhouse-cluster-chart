@@ -1,0 +1,32 @@
+# Expose the ClickHouse HTTP (8123) service externally.
+# Enable EITHER ingress (vanilla Kubernetes) OR route (OpenShift).
+
+clickhouseCluster:
+  shards: 1
+  replicas: 2
+
+# --- Kubernetes Ingress (nginx example) ---
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+  hosts:
+    - host: clickhouse.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: clickhouse-http-tls
+      hosts:
+        - clickhouse.example.com
+
+# --- OpenShift Route (edge TLS) ---
+# Disabled here; flip `enabled` and disable `ingress` above on OpenShift.
+route:
+  enabled: false
+  host: clickhouse.apps.example.com
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

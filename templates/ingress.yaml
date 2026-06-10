@@ -1,0 +1,44 @@
+{{- if .Values.ingress.enabled }}
+{{- include "clickhouse-cluster.validate" . }}
+{{- $svc := .Values.ingress.serviceName | default (include "clickhouse-cluster.clickhouseServiceName" .) }}
+{{- $port := .Values.ingress.servicePort }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "clickhouse-cluster.fullname" . }}-http
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" . | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+    {{- with .Values.ingress.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annot := include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.commonAnnotations "extra" .Values.ingress.annotations) }}
+  {{- if $annot }}
+  annotations:
+    {{- $annot | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . | quote }}
+  {{- end }}
+  {{- with .Values.ingress.tls }}
+  tls:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType | default "Prefix" }}
+            backend:
+              service:
+                name: {{ $svc }}
+                port:
+                  number: {{ $port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

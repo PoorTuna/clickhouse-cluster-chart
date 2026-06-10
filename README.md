@@ -17,6 +17,8 @@ This chart does **not** install the operator — that must be installed separate
 | `PrometheusRule` | `prometheusRule.enabled` | `false` |
 | Grafana dashboard `ConfigMap` | `grafanaDashboard.enabled` | `false` |
 | `NetworkPolicy` | `networkPolicy.enabled` | `false` |
+| ClickHouse HTTP `Ingress` | `ingress.enabled` | `false` |
+| ClickHouse HTTP `Route` (OpenShift) | `route.enabled` | `false` |
 
 ## Prerequisites
 
@@ -57,6 +59,7 @@ helm install clickhouse ./clickhouse-cluster-helm \
 | [`ha-keeper-values.yaml`](examples/ha-keeper-values.yaml) | External keeper reference, no KeeperCluster deployed |
 | [`multi-shard-values.yaml`](examples/multi-shard-values.yaml) | 4 shards / 3 replicas with extraConfig |
 | [`monitoring-values.yaml`](examples/monitoring-values.yaml) | ServiceMonitors + PrometheusRule + Grafana dashboard |
+| [`ingress-route-values.yaml`](examples/ingress-route-values.yaml) | Expose ClickHouse HTTP via Ingress or OpenShift Route |
 
 ## Helm tests
 
@@ -106,6 +109,44 @@ All parameters are documented in [`values.yaml`](values.yaml). Key ones:
 | `prometheusRule.enabled` | `bool` | `false` |
 | `prometheusRule.defaultRules.enabled` | `bool` | `true` |
 | `grafanaDashboard.enabled` | `bool` | `false` |
+
+### Ingress / OpenShift Route
+
+Expose the operator-created ClickHouse HTTP service (port `8123`) externally. Both target the load-balanced `<release>-clickhouse` Service; enable whichever fits your platform.
+
+| Parameter | Type | Default |
+|---|---|---|
+| `ingress.enabled` | `bool` | `false` |
+| `ingress.className` | `string` | `""` (cluster default) |
+| `ingress.hosts` | `array` | `[{host: clickhouse.local, paths: [{path: /, pathType: Prefix}]}]` |
+| `ingress.servicePort` | `int` | `8123` |
+| `ingress.tls` | `array` | `[]` |
+| `route.enabled` | `bool` | `false` |
+| `route.host` | `string` | `""` (OpenShift auto-generates) |
+| `route.targetPort` | `int`/`string` | `8123` |
+| `route.tls` | `object` | `{}` (plain HTTP) |
+| `route.wildcardPolicy` | `string` | `None` |
+
+Kubernetes Ingress:
+
+```bash
+helm install clickhouse ./clickhouse-cluster-helm \
+  --set ingress.enabled=true \
+  --set ingress.className=nginx \
+  --set ingress.hosts[0].host=clickhouse.example.com \
+  --set ingress.hosts[0].paths[0].path=/ \
+  --set ingress.hosts[0].paths[0].pathType=Prefix
+```
+
+OpenShift Route with edge TLS:
+
+```bash
+helm install clickhouse ./clickhouse-cluster-helm \
+  --set route.enabled=true \
+  --set route.host=clickhouse.apps.example.com \
+  --set route.tls.termination=edge \
+  --set route.tls.insecureEdgeTerminationPolicy=Redirect
+```
 
 See `values.yaml` for the full list including secrets, network policies, TLS, logger settings, pod templates, and more.
 

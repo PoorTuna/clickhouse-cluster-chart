@@ -720,6 +720,85 @@
       },
       "additionalProperties": false
     },
+    "ingress": {
+      "type": "object",
+      "description": "Kubernetes Ingress for the ClickHouse HTTP service.",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "className": { "type": "string" },
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "serviceName": { "type": "string" },
+        "servicePort": { "type": "integer", "default": 8123 },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "host": { "type": "string" },
+              "paths": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "path": { "type": "string", "default": "/" },
+                    "pathType": {
+                      "type": "string",
+                      "enum": ["Prefix", "Exact", "ImplementationSpecific"],
+                      "default": "Prefix"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "tls": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "route": {
+      "type": "object",
+      "description": "OpenShift Route for the ClickHouse HTTP service.",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "annotations": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "host": { "type": "string" },
+        "serviceName": { "type": "string" },
+        "targetPort": {
+          "type": ["integer", "string"],
+          "default": 8123
+        },
+        "wildcardPolicy": {
+          "type": "string",
+          "enum": ["None", "Subdomain"],
+          "default": "None"
+        },
+        "tls": {
+          "type": "object",
+          "description": "Route TLS termination config."
+        }
+      },
+      "additionalProperties": false
+    },
     "extraManifests": {
       "type": "array",
       "description": "Extra manifests to deploy.",

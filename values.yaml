@@ -383,6 +383,51 @@ networkPolicy:
     # -- Allow DNS resolution.
     allowDNS: true
 
+# -- Kubernetes Ingress exposing the ClickHouse HTTP (8123) service.
+ingress:
+  enabled: false
+  # -- IngressClass name. Empty = cluster default.
+  className: ""
+  # -- Additional labels.
+  labels: {}
+  # -- Additional annotations (e.g. ingress-controller config).
+  annotations: {}
+  # -- Backend Service name. Empty = "<release>-clickhouse" (operator-created).
+  serviceName: ""
+  # -- Backend Service HTTP port number.
+  servicePort: 8123
+  # -- Host rules.
+  hosts:
+    - host: clickhouse.local
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- TLS config (list of {secretName, hosts}).
+  tls: []
+  # - secretName: clickhouse-http-tls
+  #   hosts:
+  #     - clickhouse.local
+
+# -- OpenShift Route exposing the ClickHouse HTTP (8123) service.
+route:
+  enabled: false
+  # -- Additional labels.
+  labels: {}
+  # -- Additional annotations.
+  annotations: {}
+  # -- Requested host. Empty = OpenShift auto-generates.
+  host: ""
+  # -- Backend Service name. Empty = "<release>-clickhouse" (operator-created).
+  serviceName: ""
+  # -- Target port on the Service (ClickHouse HTTP).
+  targetPort: 8123
+  # -- Valid: "None", "Subdomain"
+  wildcardPolicy: None
+  # -- TLS termination. Empty = plain HTTP route.
+  tls: {}
+  #   termination: edge
+  #   insecureEdgeTerminationPolicy: Redirect
+
 # -- Extra manifests (supports tpl).
 extraManifests: []
 # - |

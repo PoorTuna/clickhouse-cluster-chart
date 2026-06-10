@@ -113,6 +113,14 @@ Usage: {{ include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.
 {{- end }}
 
 {{/*
+Name of the load-balanced ClickHouse Service created by the operator.
+Used as the backend for the Ingress / OpenShift Route.
+*/}}
+{{- define "clickhouse-cluster.clickhouseServiceName" -}}
+{{- printf "%s-clickhouse" (include "clickhouse-cluster.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
 Auto-derive the Secret name for the default user password.
 */}}
 {{- define "clickhouse-cluster.defaultUserPasswordSecretName" -}}
