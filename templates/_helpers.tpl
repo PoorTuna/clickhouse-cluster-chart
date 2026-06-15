@@ -113,11 +113,28 @@ Usage: {{ include "clickhouse-cluster.renderAnnotations" (dict "common" .Values.
 {{- end }}
 
 {{/*
-Name of the load-balanced ClickHouse Service created by the operator.
-Used as the backend for the Ingress / OpenShift Route.
+Name of the ClickHouse headless Service created by the operator.
+Used as the backend for the Ingress / OpenShift Route. The operator only
+creates headless Services (DNS: <CR-name>-clickhouse-headless), so that is
+the reachable Service name by default — see the test Pod hosts and UPGRADE.md.
+
+Overridable via values.clickhouseService:
+  - name:   full Service name, used verbatim (highest precedence).
+  - suffix: appended to the release fullname as "<fullname>-<suffix>"
+            (default "clickhouse-headless").
 */}}
 {{- define "clickhouse-cluster.clickhouseServiceName" -}}
-{{- printf "%s-clickhouse" (include "clickhouse-cluster.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- $svc := .Values.clickhouseService | default dict -}}
+{{- $default := "clickhouse-headless" -}}
+{{- $suffix := $svc.suffix | default $default -}}
+{{- if and $svc.name (ne $suffix $default) -}}
+{{- fail "clickhouseService.name and clickhouseService.suffix are mutually exclusive: set one or neither (suffix defaults to \"clickhouse-headless\")" -}}
+{{- end -}}
+{{- if $svc.name -}}
+{{- $svc.name | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" (include "clickhouse-cluster.fullname" .) $suffix | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
 {{- end }}
 
 {{/*

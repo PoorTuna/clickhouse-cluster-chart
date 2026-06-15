@@ -112,7 +112,7 @@ All parameters are documented in [`values.yaml`](values.yaml). Key ones:
 
 ### Ingress / OpenShift Route
 
-Expose the operator-created ClickHouse HTTP service (port `8123`) externally. Both target the load-balanced `<release>-clickhouse` Service; enable whichever fits your platform.
+Expose the operator-created ClickHouse HTTP service (port `8123`) externally. Both target the operator's headless `<release>-clickhouse-headless` Service by default; enable whichever fits your platform. Override the derived target via `clickhouseService.suffix` (default `clickhouse-headless`) or `clickhouseService.name` (full name verbatim); per-resource `ingress.serviceName` / `route.serviceName` win when set.
 
 | Parameter | Type | Default |
 |---|---|---|

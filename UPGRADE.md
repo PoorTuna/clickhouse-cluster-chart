@@ -1,5 +1,13 @@
 # Upgrade Guide
 
+## 0.2.9
+
+Fixes the Ingress / Route backend Service name. The `clickhouse-cluster.clickhouseServiceName` helper resolved to `<CR-name>-clickhouse`, but the operator only creates a headless Service named `<CR-name>-clickhouse-headless` (same name the Helm test Pods connect to). Ingress/Route backends pointed at a non-existent Service and never routed traffic. The helper now appends `-headless`.
+
+The derived name is now configurable via the new `clickhouseService` block: set `clickhouseService.suffix` to change the appended suffix (default `clickhouse-headless`), or `clickhouseService.name` to pin the full Service name verbatim. Setting both `name` and a non-default `suffix` is a templating error (mutually exclusive). Per-resource `ingress.serviceName` / `route.serviceName` still take precedence when set.
+
+No values changes required for the default behavior.
+
 ## 0.2.8
 
 Adds optional external exposure of the ClickHouse HTTP interface (port `8123`) via a Kubernetes `Ingress` and/or an OpenShift `Route`.

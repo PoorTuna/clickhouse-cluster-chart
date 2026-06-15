@@ -720,6 +720,15 @@
       },
       "additionalProperties": false
     },
+    "clickhouseService": {
+      "type": "object",
+      "description": "Operator-created ClickHouse Service targeted by Ingress/Route.",
+      "properties": {
+        "name": { "type": "string" },
+        "suffix": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
     "ingress": {
       "type": "object",
       "description": "Kubernetes Ingress for the ClickHouse HTTP service.",

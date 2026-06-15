@@ -384,6 +384,14 @@ networkPolicy:
     allowDNS: true
 
 # -- Kubernetes Ingress exposing the ClickHouse HTTP (8123) service.
+# -- Operator-created ClickHouse Service targeted by the Ingress / Route.
+# The operator only creates a headless Service named "<release>-clickhouse-headless".
+clickhouseService:
+  # -- Full Service name, used verbatim. Empty = derive from suffix below.
+  name: ""
+  # -- Suffix appended to the release name: "<release>-<suffix>".
+  suffix: clickhouse-headless
+
 ingress:
   enabled: false
   # -- IngressClass name. Empty = cluster default.
@@ -392,7 +400,7 @@ ingress:
   labels: {}
   # -- Additional annotations (e.g. ingress-controller config).
   annotations: {}
-  # -- Backend Service name. Empty = "<release>-clickhouse" (operator-created).
+  # -- Backend Service name. Empty = clickhouseService (default "<release>-clickhouse-headless").
   serviceName: ""
   # -- Backend Service HTTP port number.
   servicePort: 8123
@@ -417,7 +425,7 @@ route:
   annotations: {}
   # -- Requested host. Empty = OpenShift auto-generates.
   host: ""
-  # -- Backend Service name. Empty = "<release>-clickhouse" (operator-created).
+  # -- Backend Service name. Empty = clickhouseService (default "<release>-clickhouse-headless").
   serviceName: ""
   # -- Target port on the Service (ClickHouse HTTP).
   targetPort: 8123
