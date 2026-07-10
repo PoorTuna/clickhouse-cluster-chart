@@ -416,6 +416,29 @@ ingress:
   #   hosts:
   #     - clickhouse.local
 
+# -- Extra Services selecting ClickHouse pods directly (app: "<release>-clickhouse"),
+# e.g. to get a stable ClusterIP (VIP) instead of the operator's auto-created headless
+# Service (clusterIP: None), which does DNS round-robin only and can break clients that
+# expect a single stable IP (e.g. some connection poolers/load balancers).
+additionalServices:
+  []
+  # - name: clusterip # Service name suffix: "<release>-clickhouse-<name>". Use nameOverride for a verbatim name.
+  #   nameOverride: ""
+  #   type: ClusterIP
+  #   labels: {}
+  #   annotations: {}
+  #   # Override the pod selector entirely. Empty = "app: <release>-clickhouse"
+  #   # (the label the official ClickHouse operator, clickhouse.com/v1alpha1, stamps
+  #   # on its pods — same selector the ServiceMonitor and NetworkPolicy use).
+  #   selector: {}
+  #   ports:
+  #     - name: http
+  #       port: 8123
+  #       targetPort: 8123
+  #     - name: tcp
+  #       port: 9000
+  #       targetPort: 9000
+
 # -- OpenShift Route exposing the ClickHouse HTTP (8123) service.
 route:
   enabled: false

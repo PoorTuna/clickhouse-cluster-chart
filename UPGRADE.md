@@ -1,5 +1,13 @@
 # Upgrade Guide
 
+## 0.2.10
+
+Adds `additionalServices`, an optional list of extra Services selecting ClickHouse pods directly. Useful for a stable `ClusterIP` — the operator's auto-created headless Service (`<CR>-clickhouse-headless`, `clusterIP: None`) only does DNS round-robin, which can break clients that expect a single stable IP (e.g. some connection poolers/load balancers).
+
+Each entry defaults `type` to `ClusterIP` and, unless `selector` is set, selects `app: <release>-clickhouse` — the label the official ClickHouse operator (`clickhouse.com/v1alpha1`) stamps on its pods, same selector already used by the `ServiceMonitor` and `NetworkPolicy`. Set `selector` per entry to target a different label set.
+
+Empty list by default (`additionalServices: []`), so existing releases are unaffected. See the commented example in `values.yaml`.
+
 ## 0.2.9
 
 Fixes the Ingress / Route backend Service name. The `clickhouse-cluster.clickhouseServiceName` helper resolved to `<CR-name>-clickhouse`, but the operator only creates a headless Service named `<CR-name>-clickhouse-headless` (same name the Helm test Pods connect to). Ingress/Route backends pointed at a non-existent Service and never routed traffic. The helper now appends `-headless`.

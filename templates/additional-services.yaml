@@ -1,0 +1,42 @@
+{{- if .Values.additionalServices }}
+{{- include "clickhouse-cluster.validate" . }}
+{{- range $svc := .Values.additionalServices }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $svc.nameOverride | default (printf "%s-clickhouse-%s" (include "clickhouse-cluster.fullname" $) $svc.name) | trunc 63 | trimSuffix "-" }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "clickhouse-cluster.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: clickhouse
+    {{- with $svc.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- $annot := include "clickhouse-cluster.renderAnnotations" (dict "common" $.Values.commonAnnotations "extra" $svc.annotations) }}
+  {{- if $annot }}
+  annotations:
+    {{- $annot | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ $svc.type | default "ClusterIP" }}
+  {{- if $svc.selector }}
+  selector:
+    {{- toYaml $svc.selector | nindent 4 }}
+  {{- else }}
+  # Matches the label the official ClickHouse operator (clickhouse.com/v1alpha1)
+  # stamps on its pods — same selector the ServiceMonitor and NetworkPolicy use.
+  selector:
+    app: {{ include "clickhouse-cluster.fullname" $ }}-clickhouse
+  {{- end }}
+  ports:
+    {{- range $svc.ports }}
+    - name: {{ .name }}
+      port: {{ .port }}
+      targetPort: {{ .targetPort | default .port }}
+      {{- with .protocol }}
+      protocol: {{ . }}
+      {{- end }}
+    {{- end }}
+{{- end }}
+{{- end }}
