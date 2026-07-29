@@ -1,0 +1,76 @@
+# S3 guard: lock the cluster before the Ceph/S3 backing store fills up
+#
+# Assumes: helm install ch-prod . -n clickhouse -f examples/s3-guard-values.yaml
+# The guard's ClickHouse host below is spelled out for that release name and
+# namespace -- it cannot be derived automatically, see README "S3 guard".
+#
+# Requires, once per environment:
+#   helm repo add clickhouse-s3-guard <your-private-helm-repo-url>
+#   helm dependency build .
+
+clickhouseCluster:
+  enabled: true
+  shards: 2
+  replicas: 2
+
+  dataVolumeClaimSpec:
+    resources:
+      requests:
+        storage: 500Gi
+
+  settings:
+    # The guard authenticates as the "default" user, so give it a password.
+    defaultUserPassword:
+      enabled: true
+      passwordType: sha256_password
+
+keeperCluster:
+  enabled: true
+  replicas: 3
+
+secrets:
+  defaultUserPassword:
+    enabled: true
+    create: true
+    password: "change-me"
+
+clickhouse-s3-guard:
+  enabled: true
+
+  image:
+    # Retagged into the private registry from the released image tarball.
+    repository: registry.internal/clickhouse/clickhouse-s3-guard
+    tag: "1.3.0"
+
+  secret:
+    # Must match secrets.defaultUserPassword.password above.
+    clickhousePassword: "change-me"
+    thanosApiKey: "change-me"
+    # Or, for GitOps, drop the two values above and reference a Secret holding
+    # the keys THANOS_API_KEY and CLICKHOUSE_PASSWORD:
+    # existingSecret: ch-prod-s3-guard-credentials
+
+  config:
+    thanos:
+      url: "https://thanos-querier.monitoring.svc:9091"
+      account: "clickhouse-prod"
+
+    clickhouse:
+      # "<release>-clickhouse-headless.<namespace>.svc" for the install above.
+      host: "ch-prod-clickhouse-headless.clickhouse.svc"
+      # As it appears in system.clusters.
+      cluster_name: "ch_prod"
+      username: default
+
+    guard:
+      # Lock at 90% of the Ceph quota, unlock below 80% (hysteresis).
+      threshold_pct: 90
+      unlock_threshold_pct: 80
+      check_interval_seconds: 60
+      # Start here to confirm what the guard would do before letting it act.
+      dry_run: true
+
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: kube-prometheus-stack

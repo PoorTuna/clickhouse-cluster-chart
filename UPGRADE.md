@@ -1,5 +1,26 @@
 # Upgrade Guide
 
+## 0.3.0
+
+Adds [`clickhouse-s3-guard`](https://github.com/bar19y-oss/clickhouse-s3-guard) `1.3.0` as an optional subchart — the chart's first dependency. It watches Ceph/S3 quota usage via Thanos and puts the cluster into a safe state (stop merges/TTL merges/moves, block `INSERT`s by quota, reads and deletes unaffected) before the object store fills up and corrupts data, unlocking again when space is freed.
+
+Declared in `Chart.yaml` with `condition: clickhouse-s3-guard.enabled` and the repository **alias** `@clickhouse-s3-guard` rather than a URL, so no environment-specific registry is baked into the chart. This suits airgapped installs: publish the subchart to your private Helm repo, then run once per environment:
+
+```bash
+helm repo add clickhouse-s3-guard <your-private-helm-repo-url>
+helm dependency build .
+```
+
+Four values are required when the guard is enabled — `config.clickhouse.host`, `config.clickhouse.cluster_name`, `config.thanos.url`, `config.thanos.account` — plus credentials via `secret.clickhousePassword`/`secret.thanosApiKey` or `secret.existingSecret`. The new `clickhouse-cluster.validateS3Guard` rule in `templates/_validations.tpl` fails the render with an actionable message when any is missing, and the `host` message prints the correct Service name for your release (resolved through `clickhouse-cluster.clickhouseServiceName`, so `clickhouseService` overrides are reflected). These cannot be derived automatically: the subchart renders its config into a `ConfigMap` verbatim without `tpl`, so Helm cannot substitute the release name, and this chart does not know the cluster's name in `system.clusters`.
+
+The guard's credentials `Secret` uses the keys `THANOS_API_KEY` and `CLICKHOUSE_PASSWORD`, so this chart's `secrets.defaultUserPassword` `Secret` (single `password` key, release-derived name) cannot be reused for it.
+
+`values.schema.json` gains a deliberately permissive `clickhouse-s3-guard` section — without it the root `"additionalProperties": false` would reject the subchart's values outright, and typing every subchart key would break on each subchart release.
+
+**Action required even if you never enable the guard:** Helm refuses to render a chart whose declared dependency is absent from `charts/`, and it ignores `condition` when making that check, so installing from this source tree now fails with `found in Chart.yaml, but missing in charts/ directory: clickhouse-s3-guard` until `helm dependency build` has been run once. Installing from a `helm package`-produced `.tgz` is unaffected — the subchart is bundled inside it. `charts/` and `Chart.lock` are now gitignored, because `helm dependency update` rewrites the repo alias to the concrete registry URL when it writes the lock file.
+
+Beyond that step, no values changes are required on upgrade — the toggle defaults off, so rendered output for existing releases is unchanged apart from the `helm.sh/chart` version label. See [`examples/s3-guard-values.yaml`](./examples/s3-guard-values.yaml).
+
 ## 0.2.10
 
 Adds `additionalServices`, an optional list of extra Services selecting ClickHouse pods directly. Useful for a stable `ClusterIP` — the operator's auto-created headless Service (`<CR>-clickhouse-headless`, `clusterIP: None`) only does DNS round-robin, which can break clients that expect a single stable IP (e.g. some connection poolers/load balancers).

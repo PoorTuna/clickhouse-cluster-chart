@@ -459,6 +459,59 @@ route:
   #   termination: edge
   #   insecureEdgeTerminationPolicy: Redirect
 
+# -- clickhouse-s3-guard subchart (github.com/bar19y-oss/clickhouse-s3-guard).
+# Watches Ceph/S3 quota usage via Thanos and puts this cluster into a safe state
+# (stop merges/moves/TTL, block INSERTs via quota while keeping reads and deletes
+# open) before the object store fills up. Unlocks automatically when space is freed.
+#
+# Only the values that differ from the subchart's own defaults are listed here;
+# everything set under this key is merged over the subchart's values.yaml, so any
+# subchart value can be added below. Requires the subchart in a reachable Helm
+# repo -- see the dependencies block in Chart.yaml.
+clickhouse-s3-guard:
+  # -- Deploy the guard alongside this cluster (Chart.yaml `condition`).
+  enabled: false
+
+  image:
+    # -- Path in your private registry. Airgapped: docker load, retag, push first.
+    repository: clickhouse-s3-guard
+    tag: "1.3.0"
+
+  # -- Guard credentials. The subchart creates a Secret holding the keys
+  # THANOS_API_KEY and CLICKHOUSE_PASSWORD from the values below. Set
+  # existingSecret instead to manage that Secret out-of-band (GitOps /
+  # sealed-secrets); it must carry those same two keys.
+  # Note: this chart's own secrets.defaultUserPassword Secret cannot be reused
+  # directly -- it exposes a single "password" key under a release-derived name.
+  secret:
+    existingSecret: ""
+    # -- Used only when existingSecret is empty.
+    thanosApiKey: ""
+    # -- Used only when existingSecret is empty. Must match the password of the
+    # config.clickhouse.username user (i.e. secrets.defaultUserPassword.password).
+    clickhousePassword: ""
+
+  config:
+    thanos:
+      # -- Thanos Querier endpoint. Required when enabled.
+      url: ""
+      # -- Ceph account whose quota is watched. Required when enabled.
+      account: ""
+
+    clickhouse:
+      # -- ClickHouse Service of THIS release, as "<service>.<namespace>.svc"
+      # (default service: "<release>-clickhouse-headless").
+      # Not auto-derived: the subchart renders this config verbatim into a
+      # ConfigMap without tpl, so Helm cannot substitute the release name here.
+      # Required when enabled -- rendering fails with the exact value to use.
+      host: ""
+      # -- Cluster name as it appears in system.clusters, used for ON CLUSTER
+      # statements. Required when enabled; this chart does not set or know it.
+      cluster_name: ""
+      # -- Guard's ClickHouse user. Needs CREATE/DROP QUOTA and SYSTEM grants.
+      # Defaults to the user this chart manages a password for.
+      username: default
+
 # -- Extra manifests (supports tpl).
 extraManifests: []
 # - |
