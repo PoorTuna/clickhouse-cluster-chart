@@ -1,0 +1,9 @@
+# Resolved chart dependencies. Rebuild with `helm dependency build` after
+# `helm repo add clickhouse-s3-guard <your-private-helm-repo-url>`.
+charts/
+*.tgz
+
+# `helm dependency update` resolves the "@clickhouse-s3-guard" repo alias to the
+# concrete registry URL when writing this file, which would commit an
+# environment-specific internal hostname. Left untracked on purpose.
+Chart.lock

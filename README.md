@@ -19,6 +19,7 @@ This chart does **not** install the operator — that must be installed separate
 | `NetworkPolicy` | `networkPolicy.enabled` | `false` |
 | ClickHouse HTTP `Ingress` | `ingress.enabled` | `false` |
 | ClickHouse HTTP `Route` (OpenShift) | `route.enabled` | `false` |
+| S3 quota guard (`clickhouse-s3-guard` subchart) | `clickhouse-s3-guard.enabled` | `false` |
 
 ## Prerequisites
 
@@ -27,6 +28,7 @@ This chart does **not** install the operator — that must be installed separate
 - ClickHouse operator installed (CRDs: `ClickHouseCluster`, `KeeperCluster`)
 - *(Optional)* prometheus-operator for ServiceMonitor / PrometheusRule
 - *(Optional)* Grafana with sidecar for dashboard discovery
+- *(Optional)* a Helm repository serving [`clickhouse-s3-guard`](https://github.com/bar19y-oss/clickhouse-s3-guard) `1.3.0`, for the S3 guard subchart
 
 ## Quick start
 
@@ -60,6 +62,7 @@ helm install clickhouse ./clickhouse-cluster-helm \
 | [`multi-shard-values.yaml`](examples/multi-shard-values.yaml) | 4 shards / 3 replicas with extraConfig |
 | [`monitoring-values.yaml`](examples/monitoring-values.yaml) | ServiceMonitors + PrometheusRule + Grafana dashboard |
 | [`ingress-route-values.yaml`](examples/ingress-route-values.yaml) | Expose ClickHouse HTTP via Ingress or OpenShift Route |
+| [`s3-guard-values.yaml`](examples/s3-guard-values.yaml) | Ceph/S3 quota guard subchart wired to the cluster |
 
 ## Helm tests
 
@@ -146,6 +149,53 @@ helm install clickhouse ./clickhouse-cluster-helm \
   --set route.host=clickhouse.apps.example.com \
   --set route.tls.termination=edge \
   --set route.tls.insecureEdgeTerminationPolicy=Redirect
+```
+
+### S3 guard (Ceph / Thanos)
+
+Optional subchart, [`clickhouse-s3-guard`](https://github.com/bar19y-oss/clickhouse-s3-guard). It polls Ceph quota usage through Thanos and, past a threshold, puts the cluster into a safe state — stops merges, TTL merges and moves, and blocks `INSERT`s with a quota — before the object store fills up and corrupts data. Reads and deletes stay open throughout, and the guard unlocks automatically once space is freed.
+
+It is declared as a dependency with a repository **alias**, so no registry URL is baked into this chart. Add the repo once per environment, then resolve the dependency:
+
+```bash
+helm repo add clickhouse-s3-guard <your-private-helm-repo-url>
+helm dependency build .
+```
+
+**`helm dependency build` is required even with the guard disabled.** Helm refuses to render a chart whose declared dependency is missing from `charts/`, regardless of the `condition` — installing from this source tree without it fails with `found in Chart.yaml, but missing in charts/ directory`. Once resolved, `helm package .` bundles the subchart inside the parent archive, so anyone installing that `.tgz` needs no repo access at all. `charts/` and `Chart.lock` are gitignored: `helm dependency update` rewrites the alias in the lock file to the concrete registry URL, which should not be committed.
+
+Four values must be set by hand when `clickhouse-s3-guard.enabled=true`; rendering fails with an actionable message otherwise. They are not auto-derived because the subchart writes its config into a `ConfigMap` verbatim (no `tpl`), so Helm cannot substitute the release name into them, and because this chart does not know the cluster's name in `system.clusters`. The failure message for `host` prints the correct value for your release, including any `clickhouseService` override.
+
+| Parameter | Type | Default |
+|---|---|---|
+| `clickhouse-s3-guard.enabled` | `bool` | `false` |
+| `clickhouse-s3-guard.image.repository` | `string` | `clickhouse-s3-guard` |
+| `clickhouse-s3-guard.config.clickhouse.host` | `string` | `""` **(required)** — `<release>-clickhouse-headless.<namespace>.svc` |
+| `clickhouse-s3-guard.config.clickhouse.cluster_name` | `string` | `""` **(required)** — name in `system.clusters` |
+| `clickhouse-s3-guard.config.clickhouse.username` | `string` | `default` (needs `CREATE`/`DROP QUOTA` + `SYSTEM` grants) |
+| `clickhouse-s3-guard.config.thanos.url` | `string` | `""` **(required)** |
+| `clickhouse-s3-guard.config.thanos.account` | `string` | `""` **(required)** — watched Ceph account |
+| `clickhouse-s3-guard.config.guard.threshold_pct` | `int` | `90` |
+| `clickhouse-s3-guard.config.guard.dry_run` | `bool` | `false` |
+| `clickhouse-s3-guard.secret.clickhousePassword` | `string` | `""` |
+| `clickhouse-s3-guard.secret.thanosApiKey` | `string` | `""` |
+| `clickhouse-s3-guard.secret.existingSecret` | `string` | `""` |
+
+Credentials go into a `Secret` the subchart creates, with the keys `THANOS_API_KEY` and `CLICKHOUSE_PASSWORD`. This chart's own `secrets.defaultUserPassword` `Secret` cannot be reused for it — that one exposes a single `password` key. Set `existingSecret` to a `Secret` carrying both keys to manage them out-of-band instead; `clickhousePassword` must otherwise match `secrets.defaultUserPassword.password`.
+
+Only the values above are surfaced in [`values.yaml`](values.yaml); every other subchart value (actions, excluded users, hysteresis, resources, `serviceMonitor`) can be set under the same key and is merged over the subchart's defaults.
+
+```bash
+helm install clickhouse ./clickhouse-cluster-helm -n clickhouse \
+  --set clickhouse-s3-guard.enabled=true \
+  --set clickhouse-s3-guard.image.repository=registry.internal/clickhouse/clickhouse-s3-guard \
+  --set clickhouse-s3-guard.config.clickhouse.host=clickhouse-clickhouse-headless.clickhouse.svc \
+  --set clickhouse-s3-guard.config.clickhouse.cluster_name=ch_prod \
+  --set clickhouse-s3-guard.config.thanos.url=https://thanos-querier.monitoring.svc:9091 \
+  --set clickhouse-s3-guard.config.thanos.account=clickhouse-prod \
+  --set clickhouse-s3-guard.secret.clickhousePassword=<password> \
+  --set clickhouse-s3-guard.secret.thanosApiKey=<api-key> \
+  --set clickhouse-s3-guard.config.guard.dry_run=true
 ```
 
 See `values.yaml` for the full list including secrets, network policies, TLS, logger settings, pod templates, and more.

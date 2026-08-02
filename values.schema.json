@@ -847,6 +847,63 @@
       },
       "additionalProperties": false
     },
+    "clickhouse-s3-guard": {
+      "type": "object",
+      "description": "Values passed to the clickhouse-s3-guard subchart. Intentionally permissive: only the keys this chart documents are typed, so the subchart can add values without breaking validation here. See the subchart's own values.yaml for the full reference.",
+      "properties": {
+        "enabled": { "type": "boolean", "default": false },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string" },
+            "tag": { "type": "string" },
+            "pullPolicy": {
+              "type": "string",
+              "enum": ["Always", "IfNotPresent", "Never"]
+            }
+          }
+        },
+        "secret": {
+          "type": "object",
+          "description": "Guard credentials. existingSecret must carry the keys THANOS_API_KEY and CLICKHOUSE_PASSWORD.",
+          "properties": {
+            "existingSecret": { "type": "string" },
+            "thanosApiKey": { "type": "string" },
+            "clickhousePassword": { "type": "string" }
+          }
+        },
+        "config": {
+          "type": "object",
+          "description": "Guard application config, rendered verbatim into the subchart's ConfigMap.",
+          "properties": {
+            "thanos": {
+              "type": "object",
+              "properties": {
+                "url": { "type": "string" },
+                "account": { "type": "string" }
+              }
+            },
+            "clickhouse": {
+              "type": "object",
+              "properties": {
+                "host": { "type": "string" },
+                "port": { "type": ["integer", "string"] },
+                "protocol": {
+                  "type": "string",
+                  "enum": ["http", "https"]
+                },
+                "username": { "type": "string" },
+                "cluster_name": { "type": "string" },
+                "execution_strategy": {
+                  "type": "string",
+                  "enum": ["on_cluster", "per_node", "single_node"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "extraManifests": {
       "type": "array",
       "description": "Extra manifests to deploy.",

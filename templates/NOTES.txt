@@ -64,6 +64,18 @@
 {{- if .Values.grafanaDashboard.enabled }}
   Grafana dashboard ConfigMap is enabled.
 {{- end }}
+{{- $guard := index .Values "clickhouse-s3-guard" | default dict }}
+{{- if $guard.enabled }}
+
+  S3 guard is enabled. It watches Ceph account "{{ dig "config" "thanos" "account" "" $guard }}"
+  via Thanos and locks this cluster at {{ dig "config" "guard" "threshold_pct" 90 $guard }}% usage
+  (stops merges/moves, blocks INSERTs; reads and deletes stay open).
+
+    kubectl logs -l app.kubernetes.io/name=clickhouse-s3-guard,app.kubernetes.io/instance={{ .Release.Name }} -n {{ .Release.Namespace }} -f
+
+  Set clickhouse-s3-guard.config.guard.dry_run=true to log intended actions
+  without changing anything.
+{{- end }}
 
   To run Helm tests:
 
